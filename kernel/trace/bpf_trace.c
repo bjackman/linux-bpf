@@ -1233,6 +1233,8 @@ bpf_tracing_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		return &bpf_get_task_stack_proto;
 	case BPF_FUNC_copy_from_user:
 		return prog->aux->sleepable ? &bpf_copy_from_user_proto : NULL;
+	case BPF_FUNC_atomic64_inc_return:
+		return &bpf_atomic64_inc_return_proto;
 	default:
 		return NULL;
 	}

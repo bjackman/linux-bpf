@@ -667,6 +667,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_ringbuf_discard_proto;
 	case BPF_FUNC_ringbuf_query:
 		return &bpf_ringbuf_query_proto;
+	case BPF_FUNC_atomic64_inc_return:
+		return &bpf_atomic64_inc_return_proto;
 	default:
 		break;
 	}
