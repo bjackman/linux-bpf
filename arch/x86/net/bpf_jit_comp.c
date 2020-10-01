@@ -811,6 +811,7 @@ static int do_jit(struct bpf_prog *bpf_prog, int *addrs, u8 *image,
 		u8 jmp_cond;
 		int ilen;
 		u8 *func;
+		void *ip;
 
 		switch (insn->code) {
 			/* ALU */
@@ -1236,16 +1237,19 @@ xadd:			if (is_imm8(insn->off))
 
 			/* call */
 		case BPF_JMP | BPF_CALL:
+			if (!imm32)
+				return -EINVAL;
+
 			func = (u8 *) __bpf_call_base + imm32;
+			ip = image + addrs[i - 1];
 			if (tail_call_reachable) {
 				EMIT3_off32(0x48, 0x8B, 0x85,
 					    -(bpf_prog->aux->stack_depth + 8));
-				if (!imm32 || emit_call(&prog, func, image + addrs[i - 1] + 7))
-					return -EINVAL;
-			} else {
-				if (!imm32 || emit_call(&prog, func, image + addrs[i - 1]))
-					return -EINVAL;
+				ip += 7;
 			}
+
+			if (emit_call(&prog, func, ip))
+				return -EINVAL;
 			break;
 
 		case BPF_JMP | BPF_TAIL_CALL:
