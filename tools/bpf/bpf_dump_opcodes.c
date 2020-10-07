@@ -10,6 +10,15 @@
 /* Peeking at an internal header in  kernel/bpf/ */
 #include "insn_map.h"
 
+/* unused opcode to mark special call to bpf_tail_call() helper */
+#define BPF_TAIL_CALL	0xf0
+
+/* unused opcode to mark special load instruction. Same as BPF_ABS */
+#define BPF_PROBE_MEM	0x20
+
+/* unused opcode to mark call to interpreter with arguments */
+#define BPF_CALL_ARGS	0xe0
+
 int main(int argc, char **argv)
 {
 #define BPF_INSN_2_TBL(x, y)    [BPF_##x | BPF_##y] = __stringify(x##_##y)
@@ -18,6 +27,20 @@ int main(int argc, char **argv)
 		[0 ... 255] = "",
 		/* Now overwrite non-defaults ... */
 		BPF_INSN_MAP(BPF_INSN_2_TBL, BPF_INSN_3_TBL),
+		/* UAPI exposed, but rewritten opcodes. cBPF carry-over. */
+		BPF_INSN_3_TBL(LD, ABS, B)"*",
+		BPF_INSN_3_TBL(LD, ABS, H)"*",
+		BPF_INSN_3_TBL(LD, ABS, W)"*",
+		BPF_INSN_3_TBL(LD, IND, B)"*",
+		BPF_INSN_3_TBL(LD, IND, H)"*",
+		BPF_INSN_3_TBL(LD, IND, W)"*",
+		/* Non-UAPI available opcodes. */
+		BPF_INSN_2_TBL(JMP, CALL_ARGS)"*",
+		BPF_INSN_2_TBL(JMP, TAIL_CALL)"*",
+		BPF_INSN_3_TBL(LDX, PROBE_MEM, B)"*",
+		BPF_INSN_3_TBL(LDX, PROBE_MEM, H)"*",
+		BPF_INSN_3_TBL(LDX, PROBE_MEM, W)"*",
+		BPF_INSN_3_TBL(LDX, PROBE_MEM, DW) /* * skipped because it doesn't fit lol */,
 	};
 
 	/* Print column headers */
