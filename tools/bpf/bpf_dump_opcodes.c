@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 {
 #define BPF_INSN_2_TBL(x, y)    [BPF_##x | BPF_##y] = __stringify(x##_##y)
 #define BPF_INSN_3_TBL(x, y, z) [BPF_##x | BPF_##y | BPF_##z] = __stringify(x##_##y##_##z)
-	static const char public_insntable[256][16] = {
+	static const char public_insntable[256][17] = {
 		[0 ... 255] = "",
 		/* Now overwrite non-defaults ... */
 		BPF_INSN_MAP(BPF_INSN_2_TBL, BPF_INSN_3_TBL),
@@ -40,8 +40,25 @@ int main(int argc, char **argv)
 		BPF_INSN_3_TBL(LDX, PROBE_MEM, B)"*",
 		BPF_INSN_3_TBL(LDX, PROBE_MEM, H)"*",
 		BPF_INSN_3_TBL(LDX, PROBE_MEM, W)"*",
-		BPF_INSN_3_TBL(LDX, PROBE_MEM, DW) /* * skipped because it doesn't fit lol */,
+		BPF_INSN_3_TBL(LDX, PROBE_MEM, DW)"*",
 	};
+
+	if (argc > 1 && !strncmp(argv[1], "--csv", strlen("--csv"))) {
+		/* Print column headers */
+		printf(",");
+		for (int j = 0; j < 8; j++)
+			printf("0x%02x,", j, "");
+		printf("\n");
+
+		for (int i = 0; i < 32; i++) {
+			printf("0x%02x,", i * 8);
+			for (int j = 0; j < 8; j++) {
+				printf("%s,", public_insntable[i * 8 + j]);
+			}
+			printf("\n");
+		}
+		return 0;
+	}
 
 	/* Print column headers */
 	for (int j = 0; j < 8; j++)
