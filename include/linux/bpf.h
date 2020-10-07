@@ -1951,4 +1951,10 @@ int bpf_arch_text_poke(void *ip, enum bpf_text_poke_type t,
 struct btf_id_set;
 bool btf_id_set_contains(const struct btf_id_set *set, u32 id);
 
+/* BPF_LD instructions share a class code with BPF_ATM. They are only BPF_LD if
+ * the atomic mode bits are 0.
+ */
+#define IS_BPF_LD(code) (BPF_CLASS(code) == BPF_LD && BPF_ATM_MODE(code) == 0)
+#define IS_BPF_ATM(code) (BPF_CLASS(code) == BPF_ATM && BPF_ATM_MODE(code) != 0)
+
 #endif /* _LINUX_BPF_H */

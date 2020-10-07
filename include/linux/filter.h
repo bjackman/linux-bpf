@@ -83,6 +83,26 @@ struct ctl_table_header;
 
 /* Helper macros for filter block array initializers. */
 
+/* Atomic ops on registers */
+
+#define BPF_ATM_XADD_REG(DST, OFF, SRC)			\
+	((struct bpf_insn) {					\
+		.code  = BPF_ATM | BPF_ATM_XADD | BPF_X,	\
+		.dst_reg = DST,					\
+		.src_reg = SRC,					\
+		.off   = OFF,					\
+		.imm   = 0 })
+
+/* Atomic ops on immediates */
+
+#define BPF_ATM_XADD_IMM(DST, OFF, SRC, IMM)			\
+	((struct bpf_insn) {					\
+		.code  = BPF_ATM | BPF_ATM_XADD | BPF_K,	\
+		.dst_reg = DST,					\
+		.src_reg = SRC,					\
+		.off   = 0,					\
+		.imm   = IMM })
+
 /* ALU ops on registers, bpf_add|sub|...: dst_reg += src_reg */
 
 #define BPF_ALU64_REG(OP, DST, SRC)				\

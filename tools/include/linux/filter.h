@@ -29,6 +29,26 @@
 
 /* Helper macros for filter block array initializers. */
 
+/* Atomic ops on registers */
+
+#define BPF_ATM_XFADD_REG(DST, OFF, SRC)			\
+	((struct bpf_insn) {					\
+		.code  = BPF_ATM | BPF_XFADD | BPF_X,		\
+		.dst_reg = DST,					\
+		.src_reg = SRC,					\
+		.off   = OFF,					\
+		.imm   = 0 })
+
+/* Atomic ops on immediates */
+
+#define BPF_ATM_XFADD_IMM(DST, OFF, SRC, IMM)			\
+	((struct bpf_insn) {					\
+		.code  = BPF_ATM | BPF_XFADD | BPF_K,		\
+		.dst_reg = DST,					\
+		.src_reg = SRC,					\
+		.off   = OFF,					\
+		.imm   = IMM })
+
 /* ALU ops on registers, bpf_add|sub|...: dst_reg += src_reg */
 
 #define BPF_ALU64_REG(OP, DST, SRC)				\

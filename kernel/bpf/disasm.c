@@ -180,7 +180,7 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 			insn->code, insn->dst_reg,
 			bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
 			insn->src_reg, insn->off);
-	} else if (class == BPF_LD) {
+	} else if (IS_BPF_LD(insn->code)) {
 		if (BPF_MODE(insn->code) == BPF_ABS) {
 			verbose(cbs->private_data, "(%02x) r0 = *(%s *)skb[%d]\n",
 				insn->code,
@@ -211,6 +211,22 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 		} else {
 			verbose(cbs->private_data, "BUG_ld_%02x\n", insn->code);
 			return;
+		}
+	} else if (IS_BPF_ATM(insn->code)) {
+		if (BPF_ATM_MODE(insn->code) == BPF_XFADD) {
+			if (BPF_SRC(insn->code) == BPF_X) {
+				verbose(cbs->private_data,
+					"(%02x) xfadd (u64 *)(r%d %+d), r%d\n",
+					insn->code, insn->dst_reg, insn->off,
+					insn->src_reg);
+			} else {
+				verbose(cbs->private_data,
+					"(%02x) xfadd (u64 *)(r%d %+d), r%d, %d\n",
+					insn->code, insn->dst_reg, insn->off,
+					insn->src_reg, insn->imm);
+			}
+		} else {
+			verbose(cbs->private_data, "BUG_atm_%02x\n", insn->code);
 		}
 	} else if (class == BPF_JMP32 || class == BPF_JMP) {
 		u8 opcode = BPF_OP(insn->code);

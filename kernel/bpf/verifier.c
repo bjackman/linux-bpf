@@ -1646,13 +1646,19 @@ static bool is_reg64(struct bpf_verifier_env *env, struct bpf_insn *insn,
 		return true;
 	}
 
+	if (IS_BPF_ATM(code)) {
+		/* All atomic insns are 64-bit */
+		return true;
+	}
+
 	if (class == BPF_STX) {
 		if (reg->type != SCALAR_VALUE)
 			return true;
 		return BPF_SIZE(code) == BPF_DW;
 	}
 
-	if (class == BPF_LD) {
+	if (IS_BPF_LD(code)) {
+		/* TODO */
 		u8 mode = BPF_MODE(code);
 
 		/* LD_IMM64 */
@@ -1916,6 +1922,7 @@ static int backtrack_insn(struct bpf_verifier_env *env, int idx,
 			return -ENOTSUPP;
 		}
 	} else if (class == BPF_LD) {
+		/* TODO */
 		if (!(*reg_mask & dreg))
 			return 0;
 		*reg_mask &= ~dreg;
@@ -9233,6 +9240,19 @@ static bool reg_type_mismatch(enum bpf_reg_type src, enum bpf_reg_type prev)
 			       !reg_type_mismatch_ok(prev));
 }
 
+extern const struct bpf_insn_cbs printk_cbs;
+
+static int check_atm_op(struct bpf_verifier_env *env, struct bpf_insn *insn)
+{
+	struct bpf_reg_state *regs = cur_regs(env);
+
+	/* XFADD loads a value from memory into src */
+	mark_reg_unknown(env, regs, insn->src_reg);
+	regs[insn->src_reg].type = SCALAR_VALUE;
+
+	return 0;
+} /* TODO put me where the other insn checkers are */
+
 static int do_check(struct bpf_verifier_env *env)
 {
 	bool pop_log = !(env->log.level & BPF_LOG_LEVEL2);
@@ -9526,7 +9546,7 @@ process_bpf_exit:
 				if (err)
 					return err;
 			}
-		} else if (class == BPF_LD) {
+		} else if (IS_BPF_LD(insn->code)) {
 			u8 mode = BPF_MODE(insn->code);
 
 			if (mode == BPF_ABS || mode == BPF_IND) {
@@ -9545,6 +9565,15 @@ process_bpf_exit:
 				verbose(env, "invalid BPF_LD mode\n");
 				return -EINVAL;
 			}
+		} else if IS_BPF_ATM(insn->code) {
+			u8 mode = BPF_ATM_MODE(insn->code);
+
+			if (mode != BPF_XFADD) {
+				verbose(env, "invalid BPF_ATM mode\n");
+				return -EINVAL;
+			}
+
+			err = check_atm_op(env, insn);
 		} else {
 			verbose(env, "unknown insn class %d\n", class);
 			return -EINVAL;

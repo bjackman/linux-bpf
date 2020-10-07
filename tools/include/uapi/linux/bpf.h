@@ -18,8 +18,12 @@
 #define BPF_ALU64	0x07	/* alu mode in double word width */
 
 /* ld/ldx fields */
+#define BPF_ATM		0x00    /* atomics (class code shared with BPF_LD) */
 #define BPF_DW		0x18	/* double word (64-bit) */
 #define BPF_XADD	0xc0	/* exclusive add */
+
+/* atm fields */
+#define BPF_XFADD    0x80
 
 /* alu/jmp fields */
 #define BPF_MOV		0xb0	/* mov reg to reg */
