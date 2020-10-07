@@ -85,6 +85,10 @@ $(OUTPUT)bpf_dbg: $(OUTPUT)bpf_dbg.o
 $(OUTPUT)bpf_asm: $(OUTPUT)bpf_asm.o $(OUTPUT)bpf_exp.yacc.o $(OUTPUT)bpf_exp.lex.o
 	$(QUIET_LINK)$(CC) $(CFLAGS) -o $@ $^
 
+$(OUTPUT)bpf_dump_opcodes: $(srctree)/tools/bpf/bpf_dump_opcodes.c
+	$(QUIET_CC)$(CC) $(CFLAGS) -I$(srctree)/kernel/bpf/ -o $@ $<
+
+
 $(OUTPUT)bpf_exp.lex.c: $(OUTPUT)bpf_exp.yacc.c
 $(OUTPUT)bpf_exp.yacc.o: $(OUTPUT)bpf_exp.yacc.c
 $(OUTPUT)bpf_exp.lex.o: $(OUTPUT)bpf_exp.lex.c
