@@ -98,6 +98,8 @@ static int bpf_size_to_x86_bytes(int bpf_size)
 #define X86_JLE 0x7E
 #define X86_JG  0x7F
 
+#define X86_LOCK 0xF0
+
 /* Pick a register outside of BPF range for JIT internal work */
 #define AUX_REG (MAX_BPF_JIT_REG + 1)
 #define X86_REG_R9 (MAX_BPF_JIT_REG + 2)
@@ -681,6 +683,27 @@ static void emit_mov_reg(u8 **pprog, bool is64, u32 dst_reg, u32 src_reg)
 	*pprog = prog;
 }
 
+/* Emit the ModR/M byte for addressing *(dst_reg + off) */
+static void emit_modrm_dstoff(u8 **pprog, u32 dst_reg, u32 src_reg, int off)
+{
+	u8 *prog = *pprog;
+	int cnt = 0;
+
+	if (is_imm8(off)) {
+		/* 1-byte signed displacement.
+		 *
+		 * If off == 0 we could skip this and save one extra byte, but
+		 * special case of x86 R13 which always needs an offset is not
+		 * worth the hassle
+		 */
+		EMIT2(add_2reg(0x40, dst_reg, src_reg), off);
+	} else {
+		/* 4-byte signed displacement */
+		EMIT1_off32(add_2reg(0x80, dst_reg, src_reg), off);
+	}
+	*pprog = prog;
+}
+
 /* LDX: dst_reg = *(u8*)(src_reg + off) */
 static void emit_ldx(u8 **pprog, u32 size, u32 dst_reg, u32 src_reg, int off)
 {
@@ -751,10 +774,7 @@ static void emit_stx(u8 **pprog, u32 size, u32 dst_reg, u32 src_reg, int off)
 		EMIT2(add_2mod(0x48, dst_reg, src_reg), 0x89);
 		break;
 	}
-	if (is_imm8(off))
-		EMIT2(add_2reg(0x40, dst_reg, src_reg), off);
-	else
-		EMIT1_off32(add_2reg(0x80, dst_reg, src_reg), off);
+	emit_modrm_dstoff(&prog, dst_reg, src_reg, off);
 	*pprog = prog;
 }
 
@@ -1240,11 +1260,7 @@ st:			if (is_imm8(insn->off))
 			goto xadd;
 		case BPF_STX | BPF_XADD | BPF_DW:
 			EMIT3(0xF0, add_2mod(0x48, dst_reg, src_reg), 0x01);
-xadd:			if (is_imm8(insn->off))
-				EMIT2(add_2reg(0x40, dst_reg, src_reg), insn->off);
-			else
-				EMIT1_off32(add_2reg(0x80, dst_reg, src_reg),
-					    insn->off);
+xadd:			emit_modrm_dstoff(&prog, dst_reg, src_reg, insn->off);
 			break;
 
 			/* call */
@@ -1457,7 +1473,14 @@ emit_jmp:
 			EMIT1(0xC9);         /* leave */
 			EMIT1(0xC3);         /* ret */
 			break;
-
+		case BPF_ATM | BPF_XFADD | BPF_X:
+			EMIT1(X86_LOCK);
+			/* REX: 64 bit operands */
+			EMIT1(add_2mod(0x48, dst_reg, src_reg));
+			/* opcode */
+			EMIT2(0x0F, 0xC1);
+			emit_modrm_dstoff(&prog, dst_reg, src_reg, insn->off);
+			break;
 		default:
 			/*
 			 * By design x86-64 JIT should support all BPF instructions.
