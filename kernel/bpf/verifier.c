@@ -3597,15 +3597,14 @@ static int check_mem_access(struct bpf_verifier_env *env, int insn_idx, u32 regn
 	return err;
 }
 
-static int check_xadd(struct bpf_verifier_env *env, int insn_idx, struct bpf_insn *insn)
+/* Check common requirements for XADD and XFADD */
+static int __check_atomic_add(struct bpf_verifier_env *env, struct bpf_insn *insn,
+			      int bpf_size)
 {
+	const char *insn_name =
+		BPF_MODE(insn->code) == BPF_XADD ? "BPF_XADD" : "BPF_XFADD";
 	int err;
-
-	if ((BPF_SIZE(insn->code) != BPF_W && BPF_SIZE(insn->code) != BPF_DW) ||
-	    insn->imm != 0) {
-		verbose(env, "BPF_XADD uses reserved fields\n");
-		return -EINVAL;
-	}
+	int insn_idx = env->insn_idx;
 
 	/* check src1 operand */
 	err = check_reg_arg(env, insn->src_reg, SRC_OP);
@@ -3626,21 +3625,51 @@ static int check_xadd(struct bpf_verifier_env *env, int insn_idx, struct bpf_ins
 	    is_pkt_reg(env, insn->dst_reg) ||
 	    is_flow_key_reg(env, insn->dst_reg) ||
 	    is_sk_reg(env, insn->dst_reg)) {
-		verbose(env, "BPF_XADD stores into R%d %s is not allowed\n",
-			insn->dst_reg,
+		verbose(env, "%s stores into R%d %s is not allowed\n",
+			insn_name, insn->dst_reg,
 			reg_type_str[reg_state(env, insn->dst_reg)->type]);
 		return -EACCES;
 	}
 
 	/* check whether atomic_add can read the memory */
 	err = check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
-			       BPF_SIZE(insn->code), BPF_READ, -1, true);
+			       bpf_size, BPF_READ, -1, true);
 	if (err)
 		return err;
 
 	/* check whether atomic_add can write into the same memory */
 	return check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
-				BPF_SIZE(insn->code), BPF_WRITE, -1, true);
+				bpf_size, BPF_WRITE, -1, true);
+}
+
+static int check_xadd(struct bpf_verifier_env *env, struct bpf_insn *insn)
+{
+	int size = BPF_SIZE(insn->code);
+
+	if ((size != BPF_W && size != BPF_DW) || insn->imm != 0) {
+		verbose(env, "BPF_XADD uses reserved fields\n");
+		return -EINVAL;
+	}
+
+	return __check_atomic_add(env, insn, size);
+}
+
+static int check_xfadd(struct bpf_verifier_env *env, struct bpf_insn *insn)
+{
+	struct bpf_reg_state *regs = cur_regs(env);
+	int err;
+
+	err = __check_atomic_add(env, insn, BPF_DW);
+	if (err)
+		return err;
+
+	/* XFADD loads the old value from memory into src reg */
+	err = check_reg_arg(env, insn->src_reg, DST_OP);
+	if (err)
+		return err;
+	regs[insn->src_reg].type = SCALAR_VALUE;
+
+	return 0;
 }
 
 static int __check_stack_boundary(struct bpf_verifier_env *env, u32 regno,
@@ -9242,17 +9271,6 @@ static bool reg_type_mismatch(enum bpf_reg_type src, enum bpf_reg_type prev)
 
 extern const struct bpf_insn_cbs printk_cbs;
 
-static int check_atm_op(struct bpf_verifier_env *env, struct bpf_insn *insn)
-{
-	struct bpf_reg_state *regs = cur_regs(env);
-
-	/* XFADD loads a value from memory into src */
-	mark_reg_unknown(env, regs, insn->src_reg);
-	regs[insn->src_reg].type = SCALAR_VALUE;
-
-	return 0;
-} /* TODO put me where the other insn checkers are */
-
 static int do_check(struct bpf_verifier_env *env)
 {
 	bool pop_log = !(env->log.level & BPF_LOG_LEVEL2);
@@ -9398,7 +9416,7 @@ static int do_check(struct bpf_verifier_env *env)
 			enum bpf_reg_type *prev_dst_type, dst_reg_type;
 
 			if (BPF_MODE(insn->code) == BPF_XADD) {
-				err = check_xadd(env, env->insn_idx, insn);
+				err = check_xadd(env, insn);
 				if (err)
 					return err;
 				env->insn_idx++;
@@ -9573,7 +9591,9 @@ process_bpf_exit:
 				return -EINVAL;
 			}
 
-			err = check_atm_op(env, insn);
+			err = check_xfadd(env, insn);
+			if (err)
+				return err;
 		} else {
 			verbose(env, "unknown insn class %d\n", class);
 			return -EINVAL;
