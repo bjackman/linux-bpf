@@ -34,8 +34,6 @@
 #include <linux/log2.h>
 #include <asm/unaligned.h>
 
-#include "disasm.h"
-
 /* Registers */
 #define BPF_R0	regs[BPF_REG_0]
 #define BPF_R1	regs[BPF_REG_1]
@@ -1369,18 +1367,6 @@ u64 __weak bpf_probe_read_kernel(void *dst, u32 size, const void *unsafe_ptr)
 	return -EFAULT;
 }
 
-static void do_printk(void *priv, const char *fmt, ...) {
-	va_list args;
-
-	va_start(args, fmt);
-	vprintk(fmt, args);
-	va_end(args);
-}
-
-const struct bpf_insn_cbs printk_cbs = {
-	.cb_print	= do_printk,
-};
-
 /**
  *	__bpf_prog_run - run eBPF program on a given context
  *	@regs: is the array of MAX_BPF_EXT_REG eBPF pseudo-registers
@@ -1391,7 +1377,6 @@ const struct bpf_insn_cbs printk_cbs = {
  */
 static u64 __no_fgcse ___bpf_prog_run(u64 *regs, const struct bpf_insn *insn, u64 *stack)
 {
-
 #define BPF_INSN_2_LBL(x, y)    [BPF_##x | BPF_##y] = &&x##_##y
 #define BPF_INSN_3_LBL(x, y, z) [BPF_##x | BPF_##y | BPF_##z] = &&x##_##y##_##z
 	static const void * const jumptable[256] __annotate_jump_table = {
@@ -1414,8 +1399,6 @@ static u64 __no_fgcse ___bpf_prog_run(u64 *regs, const struct bpf_insn *insn, u6
 #define CONT_JMP ({ insn++; goto select_insn; })
 
 select_insn:
-	printk("Executing: %02x\n", insn->code);
-	print_bpf_insn(&printk_cbs, insn, true);
 	goto *jumptable[insn->code];
 
 	/* ALU */

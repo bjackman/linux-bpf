@@ -977,7 +977,12 @@ static void do_test_single(struct bpf_test *test, bool unpriv,
 	attr.insns = prog;
 	attr.insns_cnt = prog_len;
 	attr.license = "GPL";
-	attr.log_level = 7;
+	if (verbose)
+		attr.log_level = 1;
+	else if (expected_ret == VERBOSE_ACCEPT)
+		attr.log_level = 2;
+	else
+		attr.log_level = 4;
 	attr.prog_flags = pflags;
 
 	if (prog_type == BPF_PROG_TYPE_TRACING && test->kfunc) {

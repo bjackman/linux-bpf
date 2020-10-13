@@ -9255,7 +9255,6 @@ static int check_atm_op(struct bpf_verifier_env *env, struct bpf_insn *insn)
 
 static int do_check(struct bpf_verifier_env *env)
 {
-	int i;
 	bool pop_log = !(env->log.level & BPF_LOG_LEVEL2);
 	struct bpf_verifier_state *state = env->cur_state;
 	struct bpf_insn *insns = env->prog->insnsi;
@@ -9582,10 +9581,6 @@ process_bpf_exit:
 
 		env->insn_idx++;
 	}
-
-	printk("At the end of do_check\n");
-	for (i = 0; i < insn_cnt; i++)
-		print_bpf_insn(&printk_cbs, &insns[i], true);
 
 	return 0;
 }
@@ -9941,7 +9936,7 @@ next_insn:
 
 		/* Basic sanity check before we invest more work here. */
 		if (!bpf_opcode_in_insntable(insn->code)) {
-			verbose(env, "%s: unknown opcode %02x\n", __func__, insn->code);
+			verbose(env, "unknown opcode %02x\n", insn->code);
 			return -EINVAL;
 		}
 	}
@@ -11957,23 +11952,12 @@ skip_full_check:
 			sanitize_dead_code(env);
 	}
 
-	printk("\nBefore convert_ctx_accesses\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
-
 	if (ret == 0)
 		/* program is valid, convert *(u32*)(ctx + off) accesses */
 		ret = convert_ctx_accesses(env);
 
-	printk("\nBefore fixup_bpf_calls\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
-
 	if (ret == 0)
 		ret = fixup_bpf_calls(env);
-	printk("\nAfter fixup_bpf_calls\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
 
 	/* do 32-bit optimization after insn patching has done so those patched
 	 * insns could be handled correctly.
@@ -11984,17 +11968,8 @@ skip_full_check:
 								     : false;
 	}
 
-	printk("\nAfter 32bit opt\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
-
-
 	if (ret == 0)
 		ret = fixup_call_args(env);
-
-	printk("\nAfter fixup_call_args\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
 
 	env->verification_time = ktime_get_ns() - start_time;
 	print_verification_stats(env);
@@ -12021,24 +11996,14 @@ skip_full_check:
 		       sizeof(env->used_maps[0]) * env->used_map_cnt);
 		env->prog->aux->used_map_cnt = env->used_map_cnt;
 
-		printk("\nBefore convert_pseudo_ld_imm64\n");
-		for (i = 0; i < env->prog->len; i++)
-			print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
 		/* program is valid. Convert pseudo bpf_ld_imm64 into generic
 		 * bpf_ld_imm64 instructions
 		 */
 		convert_pseudo_ld_imm64(env);
 	}
 
-	printk("\nbefore adjust_btf_func\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
 	if (ret == 0)
 		adjust_btf_func(env);
-
-	printk("\nend of bpf_check\n");
-	for (i = 0; i < env->prog->len; i++)
-		print_bpf_insn(&printk_cbs, &env->prog->insnsi[i], true);
 
 err_release_maps:
 	if (!env->prog->aux->used_maps)
