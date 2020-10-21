@@ -14,12 +14,22 @@
 /* Extended instruction set based on top of classic BPF */
 
 /* instruction classes */
+#define BPF_ATM		0x00    /* atomics (class code shared with BPF_LD) */
 #define BPF_JMP32	0x06	/* jmp mode in word width */
 #define BPF_ALU64	0x07	/* alu mode in double word width */
 
-#define IS_BPF_LD(code) (BPF_CLASS(code) == BPF_LD)
+/* BPF_LD instructions share a class code with BPF_ATM. They are only BPF_LD if
+ * the atomic mode bits are 0.
+ */
+#define IS_BPF_LD(code) (BPF_CLASS(code) == BPF_LD && BPF_ATM_MODE(code) == 0)
+#define IS_BPF_ATM(code) (BPF_CLASS(code) == BPF_ATM && BPF_ATM_MODE(code) != 0)
+
+/* atm fields */
+#define BPF_ATM_MODE(code) ((code) & 0x80)
+#define BPF_XFADD	0x80
 
 /* ld/ldx fields */
+#define BPF_ATM		0x00    /* atomics (class code shared with BPF_LD) */
 #define BPF_DW		0x18	/* double word (64-bit) */
 #define BPF_XADD	0xc0	/* exclusive add */
 

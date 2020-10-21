@@ -1646,6 +1646,11 @@ static bool is_reg64(struct bpf_verifier_env *env, struct bpf_insn *insn,
 		return true;
 	}
 
+	if (IS_BPF_ATM(code)) {
+		/* All atomic insns are 64-bit */
+		return true;
+	}
+
 	if (class == BPF_STX) {
 		if (reg->type != SCALAR_VALUE)
 			return true;
@@ -3590,9 +3595,12 @@ static int check_mem_access(struct bpf_verifier_env *env, int insn_idx, u32 regn
 	return err;
 }
 
+/* Check common requirements for XADD and XFADD */
 static int __check_atomic_add(struct bpf_verifier_env *env, struct bpf_insn *insn,
 			      int bpf_size)
 {
+	const char *insn_name =
+		BPF_MODE(insn->code) == BPF_XADD ? "BPF_XADD" : "BPF_XFADD";
 	int err;
 	int insn_idx = env->insn_idx;
 
@@ -3615,8 +3623,8 @@ static int __check_atomic_add(struct bpf_verifier_env *env, struct bpf_insn *ins
 	    is_pkt_reg(env, insn->dst_reg) ||
 	    is_flow_key_reg(env, insn->dst_reg) ||
 	    is_sk_reg(env, insn->dst_reg)) {
-		verbose(env, "BPF_XADD stores into R%d %s is not allowed\n",
-			insn->dst_reg,
+		verbose(env, "%s stores into R%d %s is not allowed\n",
+			insn_name, insn->dst_reg,
 			reg_type_str[reg_state(env, insn->dst_reg)->type]);
 		return -EACCES;
 	}
@@ -3642,6 +3650,24 @@ static int check_xadd(struct bpf_verifier_env *env, struct bpf_insn *insn)
 	}
 
 	return __check_atomic_add(env, insn, size);
+}
+
+static int check_xfadd(struct bpf_verifier_env *env, struct bpf_insn *insn)
+{
+	struct bpf_reg_state *regs = cur_regs(env);
+	int err;
+
+	err = __check_atomic_add(env, insn, BPF_DW);
+	if (err)
+		return err;
+
+	/* XFADD loads the old value from memory into src reg */
+	err = check_reg_arg(env, insn->src_reg, DST_OP);
+	if (err)
+		return err;
+	regs[insn->src_reg].type = SCALAR_VALUE;
+
+	return 0;
 }
 
 static int __check_stack_boundary(struct bpf_verifier_env *env, u32 regno,
@@ -9553,6 +9579,17 @@ process_bpf_exit:
 				verbose(env, "invalid BPF_LD mode\n");
 				return -EINVAL;
 			}
+		} else if IS_BPF_ATM(insn->code) {
+			u8 mode = BPF_ATM_MODE(insn->code);
+
+			if (mode != BPF_XFADD) {
+				verbose(env, "invalid BPF_ATM mode\n");
+				return -EINVAL;
+			}
+
+			err = check_xfadd(env, insn);
+			if (err)
+				return err;
 		} else {
 			verbose(env, "unknown insn class %d\n", class);
 			return -EINVAL;

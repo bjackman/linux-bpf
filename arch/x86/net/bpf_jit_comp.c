@@ -98,6 +98,8 @@ static int bpf_size_to_x86_bytes(int bpf_size)
 #define X86_JLE 0x7E
 #define X86_JG  0x7F
 
+#define X86_LOCK 0xF0 /* instruction prefix for "lock ..." */
+
 /* Pick a register outside of BPF range for JIT internal work */
 #define AUX_REG (MAX_BPF_JIT_REG + 1)
 #define X86_REG_R9 (MAX_BPF_JIT_REG + 2)
@@ -1471,7 +1473,14 @@ emit_jmp:
 			EMIT1(0xC9);         /* leave */
 			EMIT1(0xC3);         /* ret */
 			break;
-
+		case BPF_ATM | BPF_XFADD:
+			EMIT1(X86_LOCK);
+			/* REX: 64 bit operands */
+			EMIT1(add_2mod(0x48, dst_reg, src_reg));
+			/* opcode */
+			EMIT2(0x0F, 0xC1);
+			emit_modrm_dstoff(&prog, dst_reg, src_reg, insn->off);
+			break;
 		default:
 			/*
 			 * By design x86-64 JIT should support all BPF instructions.

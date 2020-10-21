@@ -212,6 +212,15 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 			verbose(cbs->private_data, "BUG_ld_%02x\n", insn->code);
 			return;
 		}
+	} else if (IS_BPF_ATM(insn->code)) {
+		if (BPF_ATM_MODE(insn->code) == BPF_XFADD) {
+			verbose(cbs->private_data,
+				"(%02x) xfadd (u64 *)(r%d %+d), r%d\n",
+				insn->code, insn->dst_reg, insn->off,
+				insn->src_reg);
+		} else {
+			verbose(cbs->private_data, "BUG_atm_%02x\n", insn->code);
+		}
 	} else if (class == BPF_JMP32 || class == BPF_JMP) {
 		u8 opcode = BPF_OP(insn->code);
 

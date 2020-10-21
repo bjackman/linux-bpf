@@ -5502,7 +5502,7 @@ poison:
 				 prog->name, relo_idx, insn_idx, res->orig_sz, res->new_sz);
 		}
 		break;
-	case BPF_LD: {
+	case BPF_LD: if (IS_BPF_LD(insn->code)) { /* BPF_LD == BPF_ATM */
 		__u64 imm;
 
 		if (!IS_BPF_LD(insn->code)) {

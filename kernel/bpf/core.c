@@ -1331,7 +1331,10 @@ EXPORT_SYMBOL_GPL(__bpf_call_base);
 	INSN_3(LDX, MEM, W),			\
 	INSN_3(LDX, MEM, DW),			\
 	/*   Immediate based. */		\
-	INSN_3(LD, IMM, DW)
+	INSN_3(LD, IMM, DW),			\
+	/* Atomic instructions. */		\
+	/*   (Always register based) */		\
+	INSN_2(ATM, XFADD)
 
 bool bpf_opcode_in_insntable(u8 code)
 {
@@ -1419,6 +1422,10 @@ select_insn:
 	ALU(XOR,  ^)
 	ALU(MUL,  *)
 #undef ALU
+	ATM_XFADD:
+		SRC = atomic64_fetch_add(
+			IMM, (atomic64_t *)(unsigned long)(DST + insn->off));
+		CONT;
 	ALU_NEG:
 		DST = (u32) -DST;
 		CONT;
