@@ -3590,15 +3590,11 @@ static int check_mem_access(struct bpf_verifier_env *env, int insn_idx, u32 regn
 	return err;
 }
 
-static int check_xadd(struct bpf_verifier_env *env, int insn_idx, struct bpf_insn *insn)
+static int __check_atomic_add(struct bpf_verifier_env *env, struct bpf_insn *insn,
+			      int bpf_size)
 {
 	int err;
-
-	if ((BPF_SIZE(insn->code) != BPF_W && BPF_SIZE(insn->code) != BPF_DW) ||
-	    insn->imm != 0) {
-		verbose(env, "BPF_XADD uses reserved fields\n");
-		return -EINVAL;
-	}
+	int insn_idx = env->insn_idx;
 
 	/* check src1 operand */
 	err = check_reg_arg(env, insn->src_reg, SRC_OP);
@@ -3627,13 +3623,25 @@ static int check_xadd(struct bpf_verifier_env *env, int insn_idx, struct bpf_ins
 
 	/* check whether atomic_add can read the memory */
 	err = check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
-			       BPF_SIZE(insn->code), BPF_READ, -1, true);
+			       bpf_size, BPF_READ, -1, true);
 	if (err)
 		return err;
 
 	/* check whether atomic_add can write into the same memory */
 	return check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
-				BPF_SIZE(insn->code), BPF_WRITE, -1, true);
+				bpf_size, BPF_WRITE, -1, true);
+}
+
+static int check_xadd(struct bpf_verifier_env *env, struct bpf_insn *insn)
+{
+	int size = BPF_SIZE(insn->code);
+
+	if ((size != BPF_W && size != BPF_DW) || insn->imm != 0) {
+		verbose(env, "BPF_XADD uses reserved fields\n");
+		return -EINVAL;
+	}
+
+	return __check_atomic_add(env, insn, size);
 }
 
 static int __check_stack_boundary(struct bpf_verifier_env *env, u32 regno,
@@ -9378,7 +9386,7 @@ static int do_check(struct bpf_verifier_env *env)
 			enum bpf_reg_type *prev_dst_type, dst_reg_type;
 
 			if (BPF_MODE(insn->code) == BPF_XADD) {
-				err = check_xadd(env, env->insn_idx, insn);
+				err = check_xadd(env, insn);
 				if (err)
 					return err;
 				env->insn_idx++;
