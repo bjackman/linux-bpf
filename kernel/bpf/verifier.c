@@ -1512,7 +1512,7 @@ static int check_subprogs(struct bpf_verifier_env *env)
 		    insn[i].imm == BPF_FUNC_tail_call &&
 		    insn[i].src_reg != BPF_PSEUDO_CALL)
 			subprog[cur_subprog].has_tail_call = true;
-		if (BPF_CLASS(code) == BPF_LD &&
+		if (IS_BPF_LD(code) &&
 		    (BPF_MODE(code) == BPF_ABS || BPF_MODE(code) == BPF_IND))
 			subprog[cur_subprog].has_ld_abs = true;
 		if (BPF_CLASS(code) != BPF_JMP && BPF_CLASS(code) != BPF_JMP32)
@@ -1652,7 +1652,7 @@ static bool is_reg64(struct bpf_verifier_env *env, struct bpf_insn *insn,
 		return BPF_SIZE(code) == BPF_DW;
 	}
 
-	if (class == BPF_LD) {
+	if (IS_BPF_LD(code)) {
 		u8 mode = BPF_MODE(code);
 
 		/* LD_IMM64 */
@@ -1915,7 +1915,7 @@ static int backtrack_insn(struct bpf_verifier_env *env, int idx,
 		} else if (opcode == BPF_EXIT) {
 			return -ENOTSUPP;
 		}
-	} else if (class == BPF_LD) {
+	} else if (IS_BPF_LD(insn->code)) {
 		if (!(*reg_mask & dreg))
 			return 0;
 		*reg_mask &= ~dreg;
@@ -9534,7 +9534,7 @@ process_bpf_exit:
 				if (err)
 					return err;
 			}
-		} else if (class == BPF_LD) {
+		} else if (IS_BPF_LD(insn->code)) {
 			u8 mode = BPF_MODE(insn->code);
 
 			if (mode == BPF_ABS || mode == BPF_IND) {
@@ -10308,14 +10308,11 @@ static int opt_subreg_zext_lo32_rnd_hi32(struct bpf_verifier_env *env,
 
 		insn = insns[adj_idx];
 		if (!aux[adj_idx].zext_dst) {
-			u8 code, class;
 			u32 imm_rnd;
 
 			if (!rnd_hi32)
 				continue;
 
-			code = insn.code;
-			class = BPF_CLASS(code);
 			if (insn_no_def(&insn))
 				continue;
 
@@ -10324,14 +10321,14 @@ static int opt_subreg_zext_lo32_rnd_hi32(struct bpf_verifier_env *env,
 			 *       check, it is safe to pass NULL here.
 			 */
 			if (is_reg64(env, &insn, insn.dst_reg, NULL, DST_OP)) {
-				if (class == BPF_LD &&
-				    BPF_MODE(code) == BPF_IMM)
+				if (IS_BPF_LD(insn.code) &&
+				    BPF_MODE(insn.code) == BPF_IMM)
 					i++;
 				continue;
 			}
 
 			/* ctx load could be transformed into wider load. */
-			if (class == BPF_LDX &&
+			if (BPF_CLASS(insn.code) == BPF_LDX &&
 			    aux[adj_idx].ptr_type == PTR_TO_CTX)
 				continue;
 
@@ -10880,7 +10877,7 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 			continue;
 		}
 
-		if (BPF_CLASS(insn->code) == BPF_LD &&
+		if (IS_BPF_LD(insn->code) &&
 		    (BPF_MODE(insn->code) == BPF_ABS ||
 		     BPF_MODE(insn->code) == BPF_IND)) {
 			cnt = env->ops->gen_ld_abs(insn, insn_buf);

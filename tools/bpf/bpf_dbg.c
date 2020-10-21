@@ -515,8 +515,7 @@ static bool bpf_runnable(struct sock_filter *f, unsigned int len)
 		return false;
 	}
 	for (i = 0; i < len; i++) {
-		if (BPF_CLASS(f[i].code) == BPF_LD &&
-		    f[i].k > SKF_AD_OFF) {
+		if (IS_BPF_LD(f[i].code) && f[i].k > SKF_AD_OFF) {
 			rl_printf("extensions currently not supported!\n");
 			return false;
 		}

@@ -1626,7 +1626,10 @@ static int reg_val_propagate_range(struct jit_ctx *ctx, u64 initial_rvt,
 			}
 			rvt[idx] |= RVT_DONE;
 			break;
-		case BPF_LD:
+		case BPF_LD: /* == BPF_ATM */
+			if (!IS_BPF_LD(insn->code))
+				goto default;
+
 			switch (BPF_SIZE(insn->code)) {
 			case BPF_DW:
 				if (BPF_MODE(insn->code) == BPF_IMM) {

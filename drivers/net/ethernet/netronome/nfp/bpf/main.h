@@ -412,7 +412,7 @@ static inline bool is_mbpf_classic_load(const struct nfp_insn_meta *meta)
 {
 	u8 code = meta->insn.code;
 
-	return BPF_CLASS(code) == BPF_LD &&
+	return IS_BPF_LD(code) &&
 	       (BPF_MODE(code) == BPF_ABS || BPF_MODE(code) == BPF_IND);
 }
 

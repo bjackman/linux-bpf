@@ -180,7 +180,7 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 			insn->code, insn->dst_reg,
 			bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
 			insn->src_reg, insn->off);
-	} else if (class == BPF_LD) {
+	} else if (IS_BPF_LD(insn->code)) {
 		if (BPF_MODE(insn->code) == BPF_ABS) {
 			verbose(cbs->private_data, "(%02x) r0 = *(%s *)skb[%d]\n",
 				insn->code,

@@ -17,6 +17,8 @@
 #define BPF_JMP32	0x06	/* jmp mode in word width */
 #define BPF_ALU64	0x07	/* alu mode in double word width */
 
+#define IS_BPF_LD(code) (BPF_CLASS(code) == BPF_LD)
+
 /* ld/ldx fields */
 #define BPF_DW		0x18	/* double word (64-bit) */
 #define BPF_XADD	0xc0	/* exclusive add */

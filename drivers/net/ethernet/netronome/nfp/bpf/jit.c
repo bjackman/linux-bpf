@@ -3964,7 +3964,7 @@ static void nfp_bpf_opt_ld_mask(struct nfp_prog *nfp_prog)
 		insn = meta1->insn;
 		next = meta2->insn;
 
-		if (BPF_CLASS(insn.code) != BPF_LD)
+		if (!IS_BPF_LD(insn.code))
 			continue;
 		if (BPF_MODE(insn.code) != BPF_ABS &&
 		    BPF_MODE(insn.code) != BPF_IND)
@@ -3999,7 +3999,7 @@ static void nfp_bpf_opt_ld_shift(struct nfp_prog *nfp_prog)
 		next1 = meta2->insn;
 		next2 = meta3->insn;
 
-		if (BPF_CLASS(insn.code) != BPF_LD)
+		if (!IS_BPF_LD(insn.code))
 			continue;
 		if (BPF_MODE(insn.code) != BPF_ABS &&
 		    BPF_MODE(insn.code) != BPF_IND)

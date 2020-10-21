@@ -5505,6 +5505,10 @@ poison:
 	case BPF_LD: {
 		__u64 imm;
 
+		if (!IS_BPF_LD(insn->code)) {
+			goto bad_insn;
+		}
+
 		if (!is_ldimm64(insn) ||
 		    insn[0].src_reg != 0 || insn[0].off != 0 ||
 		    insn_idx + 1 >= prog->insns_cnt ||
@@ -5532,6 +5536,7 @@ poison:
 		break;
 	}
 	default:
+	bad_insn:
 		pr_warn("prog '%s': relo #%d: trying to relocate unrecognized insn #%d, code:0x%x, src:0x%x, dst:0x%x, off:0x%x, imm:0x%x\n",
 			prog->name, relo_idx, insn_idx, insn->code,
 			insn->src_reg, insn->dst_reg, insn->off, insn->imm);
