@@ -263,11 +263,11 @@ static inline bool insn_is_zext(const struct bpf_insn *insn)
 
 #define BPF_STX_XADD(SIZE, DST, SRC, OFF)			\
 	((struct bpf_insn) {					\
-		.code  = BPF_STX | BPF_SIZE(SIZE) | BPF_XADD,	\
+		.code  = BPF_STX | BPF_SIZE(SIZE) | BPF_ATOMIC,	\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = OFF,					\
-		.imm   = 0 })
+		.imm   = BPF_ADD })
 
 /* Memory store, *(uint *) (dst_reg + off16) = imm32 */
 

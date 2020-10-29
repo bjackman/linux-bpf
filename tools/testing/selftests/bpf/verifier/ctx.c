@@ -13,8 +13,8 @@
 	"context stores via XADD",
 	.insns = {
 	BPF_MOV64_IMM(BPF_REG_0, 0),
-	BPF_RAW_INSN(BPF_STX | BPF_XADD | BPF_W, BPF_REG_1,
-		     BPF_REG_0, offsetof(struct __sk_buff, mark), 0),
+	BPF_RAW_INSN(BPF_STX | BPF_ATOMIC | BPF_W, BPF_REG_1,
+		     BPF_REG_0, offsetof(struct __sk_buff, mark), BPF_ADD),
 	BPF_EXIT_INSN(),
 	},
 	.errstr = "BPF_XADD stores into R1 ctx is not allowed",

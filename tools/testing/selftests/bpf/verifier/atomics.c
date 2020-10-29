@@ -1,12 +1,12 @@
 {
-	"BPF_ATM_FETCH_ADD smoketest - 64bit",
+	"BPF_ATOMIC_FETCH_ADD smoketest - 64bit",
 	.insns = {
 	BPF_MOV64_IMM(BPF_REG_0, 0),
 	/* Write 3 to stack */
 	BPF_ST_MEM(BPF_DW, BPF_REG_10, -8, 3),
 	/* Put a 1 in R1, add it to the 3 on the stack, and load the value back into R1 */
 	BPF_MOV64_IMM(BPF_REG_1, 1),
-	BPF_ATM_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_1, -8),
+	BPF_ATOMIC_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_1, -8),
 	/* Check the value we loaded back was 3 */
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_1, 3, 2),
 	BPF_MOV64_IMM(BPF_REG_0, 1),
@@ -21,14 +21,14 @@
 	.result = ACCEPT,
 },
 {
-	"BPF_ATM_FETCH_ADD smoketest - 32bit",
+	"BPF_ATOMIC_FETCH_ADD smoketest - 32bit",
 	.insns = {
 	BPF_MOV64_IMM(BPF_REG_0, 0),
 	/* Write 3 to stack */
 	BPF_ST_MEM(BPF_W, BPF_REG_10, -4, 3),
 	/* Put a 1 in R1, add it to the 3 on the stack, and load the value back into R1 */
 	BPF_MOV32_IMM(BPF_REG_1, 1),
-	BPF_ATM_FETCH_ADD(BPF_W, BPF_REG_10, BPF_REG_1, -4),
+	BPF_ATOMIC_FETCH_ADD(BPF_W, BPF_REG_10, BPF_REG_1, -4),
 	/* Check the value we loaded back was 3 */
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_1, 3, 2),
 	BPF_MOV64_IMM(BPF_REG_0, 1),
@@ -47,7 +47,7 @@
 	.insns = {
 		BPF_MOV64_IMM(BPF_REG_0, 0),
 		BPF_ST_MEM(BPF_DW, BPF_REG_10, -8, 3),
-		BPF_ATM_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_10, -8),
+		BPF_ATOMIC_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_10, -8),
 		BPF_EXIT_INSN(),
 	},
 	.result = REJECT,
@@ -59,7 +59,7 @@
 	.insns = {
 		BPF_MOV64_IMM(BPF_REG_0, 0),
 		BPF_ST_MEM(BPF_DW, BPF_REG_10, -8, 3),
-		BPF_ATM_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_2, -8),
+		BPF_ATOMIC_FETCH_ADD(BPF_DW, BPF_REG_10, BPF_REG_2, -8),
 		BPF_EXIT_INSN(),
 	},
 	.result = REJECT,
@@ -72,7 +72,7 @@
 	"Can't use ATM_FETCH_ADD on uninit dst reg",
 	.insns = {
 		BPF_MOV64_IMM(BPF_REG_0, 0),
-		BPF_ATM_FETCH_ADD(BPF_DW, BPF_REG_2, BPF_REG_0, -8),
+		BPF_ATOMIC_FETCH_ADD(BPF_DW, BPF_REG_2, BPF_REG_0, -8),
 		BPF_EXIT_INSN(),
 	},
 	.result = REJECT,
@@ -93,7 +93,7 @@
 		 * because it's kernel memory.
 		 */
 		BPF_MOV64_IMM(BPF_REG_3, 1),
-		BPF_ATM_FETCH_ADD(BPF_DW, BPF_REG_2, BPF_REG_3, 0),
+		BPF_ATOMIC_FETCH_ADD(BPF_DW, BPF_REG_2, BPF_REG_3, 0),
 		/* Done */
 		BPF_MOV64_IMM(BPF_REG_0, 0),
 		BPF_EXIT_INSN(),
