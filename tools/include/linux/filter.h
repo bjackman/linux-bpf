@@ -171,15 +171,24 @@
 
 /* Atomic memory add, *(uint *)(dst_reg + off16) += src_reg */
 
-#define BPF_STX_XADD(SIZE, DST, SRC, OFF)			\
+#define BPF_ATOMIC_ADD(SIZE, DST, SRC, OFF)			\
 	((struct bpf_insn) {					\
 		.code  = BPF_STX | BPF_SIZE(SIZE) | BPF_ATOMIC,	\
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = OFF,					\
 		.imm   = BPF_ADD })
+#define BPF_STX_XADD BPF_ATOMIC_ADD /* alias */
 
-/* Memory store, *(uint *) (dst_reg + off16) = imm32 */
+/* Atomic memory add with fetch, src_reg = sync_fetch_and_add(*(dst_reg + off), src_reg); */
+
+#define BPF_ATOMIC_FETCH_ADD(SIZE, DST, SRC, OFF)		\
+	((struct bpf_insn) {					\
+		.code  = BPF_STX | BPF_SIZE(SIZE) | BPF_ATOMIC,	\
+		.dst_reg = DST,					\
+		.src_reg = SRC,					\
+		.off   = OFF,					\
+		.imm   = BPF_ADD | BPF_FETCH })
 
 #define BPF_ST_MEM(SIZE, DST, OFF, IMM)				\
 	((struct bpf_insn) {					\
