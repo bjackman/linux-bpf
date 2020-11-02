@@ -17,7 +17,7 @@
 		     BPF_REG_0, offsetof(struct __sk_buff, mark), BPF_ADD),
 	BPF_EXIT_INSN(),
 	},
-	.errstr = "BPF_XADD stores into R1 ctx is not allowed",
+	.errstr = "BPF_ATOMIC stores into R1 ctx is not allowed",
 	.result = REJECT,
 	.prog_type = BPF_PROG_TYPE_SCHED_CLS,
 },

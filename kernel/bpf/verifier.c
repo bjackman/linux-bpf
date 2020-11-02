@@ -3600,18 +3600,8 @@ static int check_mem_access(struct bpf_verifier_env *env, int insn_idx, u32 regn
 
 static int check_atomic(struct bpf_verifier_env *env, int insn_idx, struct bpf_insn *insn)
 {
+	struct bpf_reg_state *regs = cur_regs(env);
 	int err;
-
-	if (insn->imm != BPF_ADD) {
-		verbose(env, "invalid atomic operation type\n");
-		return -EINVAL;
-	}
-
-	if ((BPF_SIZE(insn->code) != BPF_W && BPF_SIZE(insn->code) != BPF_DW) ||
-	    insn->imm != 0) {
-		verbose(env, "invalid atomic operand size\n");
-		return -EINVAL;
-	}
 
 	/* check src1 operand */
 	err = check_reg_arg(env, insn->src_reg, SRC_OP);
@@ -3632,7 +3622,7 @@ static int check_atomic(struct bpf_verifier_env *env, int insn_idx, struct bpf_i
 	    is_pkt_reg(env, insn->dst_reg) ||
 	    is_flow_key_reg(env, insn->dst_reg) ||
 	    is_sk_reg(env, insn->dst_reg)) {
-		verbose(env, "atomic stores into R%d %s is not allowed\n",
+		verbose(env, "BPF_ATOMIC stores into R%d %s is not allowed\n",
 			insn->dst_reg,
 			reg_type_str[reg_state(env, insn->dst_reg)->type]);
 		return -EACCES;
@@ -3645,8 +3635,22 @@ static int check_atomic(struct bpf_verifier_env *env, int insn_idx, struct bpf_i
 		return err;
 
 	/* check whether we can write into the same memory */
-	return check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
-				BPF_SIZE(insn->code), BPF_WRITE, -1, true);
+	err = check_mem_access(env, insn_idx, insn->dst_reg, insn->off,
+			       BPF_SIZE(insn->code), BPF_WRITE, -1, true);
+	if (err)
+		return err;
+
+
+	if (!(insn->imm & BPF_FETCH))
+		return 0;
+
+	/* check and record load of old value into src reg  */
+	err = check_reg_arg(env, insn->src_reg, DST_OP);
+	if (err)
+		return err;
+	regs[insn->src_reg].type = SCALAR_VALUE;
+
+	return 0;
 }
 
 static int __check_stack_boundary(struct bpf_verifier_env *env, u32 regno,
@@ -9876,6 +9880,35 @@ static bool bpf_map_is_cgroup_storage(struct bpf_map *map)
 		map->map_type == BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE);
 }
 
+static int check_stx_reserved_fields(struct bpf_verifier_env *env,
+				     struct bpf_insn *insn)
+{
+	if (BPF_MODE(insn->code) == BPF_MEM) {
+		if (insn->imm != 0) {
+			verbose(env, "BPF_STX_MEM uses reserved immediate\n");
+			return -EINVAL;
+		}
+		return 0;
+	}
+
+	if (BPF_MODE(insn->code) != BPF_ATOMIC) {
+		verbose(env, "BPF_STX uses invalid mode");
+		return -EINVAL;
+	}
+
+	if (insn->imm & ~(BPF_OP(0xFF) | BPF_FETCH)) {
+		verbose(env, "BPF_STX_ATOMIC uses reserved immediate bits\n");
+		return -EINVAL;
+	}
+
+	if (BPF_OP(insn->imm) != BPF_ADD) {
+		verbose(env, "BPF_STX_ATOMIC uses invalid atomic op code\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /* find and rewrite pseudo imm in ld_imm64 instructions:
  *
  * 1. if it accesses map FD, replace it with actual map pointer.
@@ -9900,11 +9933,10 @@ static int resolve_pseudo_ldimm64(struct bpf_verifier_env *env)
 			return -EINVAL;
 		}
 
-		if (BPF_CLASS(insn->code) == BPF_STX &&
-		    ((BPF_MODE(insn->code) != BPF_MEM &&
-		      BPF_MODE(insn->code) != BPF_ATOMIC) || insn->imm != 0)) {
-			verbose(env, "BPF_STX uses reserved fields\n");
-			return -EINVAL;
+		if (BPF_CLASS(insn->code) == BPF_STX) {
+			err = check_stx_reserved_fields(env, insn);
+			if (err)
+				return err;
 		}
 
 		if (insn[0].code == (BPF_LD | BPF_IMM | BPF_DW)) {
