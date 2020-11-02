@@ -9901,7 +9901,9 @@ static int check_stx_reserved_fields(struct bpf_verifier_env *env,
 		return -EINVAL;
 	}
 
-	if (BPF_OP(insn->imm) != BPF_ADD) {
+	if (BPF_OP(insn->imm) != BPF_ADD &&
+	    BPF_OP(insn->imm) != BPF_SET &&
+	    BPF_OP(insn->imm) != BPF_CMPSET) {
 		verbose(env, "BPF_STX_ATOMIC uses invalid atomic op code\n");
 		return -EINVAL;
 	}
