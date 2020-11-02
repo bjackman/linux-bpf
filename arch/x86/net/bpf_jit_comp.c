@@ -1255,22 +1255,31 @@ st:			if (is_imm8(insn->off))
 
 		case BPF_STX | BPF_ATOMIC | BPF_W:
 		case BPF_STX | BPF_ATOMIC | BPF_DW:
-			if (insn->imm != BPF_ADD) {
+			if (BPF_OP(insn->imm) != BPF_ADD) {
 				pr_err("bpf_jit: unknown opcode %02x\n", insn->imm);
 				return -EFAULT;
 			}
 
-			/* XADD: lock *(u32/u64*)(dst_reg + off) += src_reg */
+			EMIT1(0xF0); /* lock prefix */
 
+			/* emit REX if necessary */
 			if (BPF_SIZE(insn->code) == BPF_W) {
 				/* Emit 'lock add dword ptr [rax + off], eax' */
 				if (is_ereg(dst_reg) || is_ereg(src_reg))
-					EMIT3(0xF0, add_2mod(0x40, dst_reg, src_reg), 0x01);
-				else
-					EMIT2(0xF0, 0x01);
+					EMIT1(add_2mod(0x40, dst_reg, src_reg));
 			} else {
-				EMIT3(0xF0, add_2mod(0x48, dst_reg, src_reg), 0x01);
+				EMIT1(add_2mod(0x48, dst_reg, src_reg));
 			}
+
+			/* emit opcode */
+			if (insn->imm & BPF_FETCH) {
+				/* src_reg = sync_fetch_and_add(*(dst_reg + off), src_reg); */
+				EMIT2(0x0F, 0xC1);
+			} else {
+				/* lock *(u32/u64*)(dst_reg + off) += src_reg */
+				EMIT1(0x01);
+			}
+
 			emit_modrm_dstoff(&prog, dst_reg, src_reg, insn->off);
 			break;
 
