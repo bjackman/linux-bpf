@@ -1,18 +1,10 @@
-Linux kernel
+BPF atomics notes
 ============
 
-There are several guides for kernel developers and users. These guides can
-be rendered in a number of formats, like HTML and PDF. Please read
-Documentation/admin-guide/README.rst first.
+- Currently using bizarro names for the [cmp]xchg ops (`BPF_XCHG = BPF_SET | BPF_FETCH`), need to see what maintainers think of that.
 
-In order to build the documentation, use ``make htmldocs`` or
-``make pdfdocs``.  The formatted documentation can also be read online at:
+- ADD support appears to work, with x86 jit.
 
-    https://www.kernel.org/doc/html/latest/
+- [cmp]xchg is missing verifier support - need to tell the verifier about the registers being used (e.g. it doesn't currently update R0 as live after BPF_CMPSET | BPF_FETCH).
 
-There are various text files in the Documentation/ subdirectory,
-several of them using the Restructured Text markup notation.
-
-Please read the Documentation/process/changes.rst file, as it contains the
-requirements for building and running the kernel, and information about
-the problems which may result by upgrading your kernel.
+- Need to figure out if cmpxchg should load the value back into src or R0. Former would mean simpler verifier but need to see how it would bt JITed.
