@@ -154,9 +154,17 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 				insn->dst_reg,
 				insn->off, insn->src_reg);
 		else if (BPF_MODE(insn->code) == BPF_ATOMIC &&
-			 insn->imm != BPF_ADD) {
+			 insn->imm == BPF_ADD) {
 			verbose(cbs->private_data, "(%02x) lock *(%s *)(r%d %+d) += r%d\n",
 				insn->code,
+				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
+				insn->dst_reg, insn->off,
+				insn->src_reg);
+		} else if (BPF_MODE(insn->code) == BPF_ATOMIC &&
+			   BPF_OP(insn->imm) == BPF_CMPSET) {
+			verbose(cbs->private_data, "(%02x) %satomic_cmpxchg(*(%s *)(r%d %+d), r0, r%d)",
+				insn->code,
+				insn->imm & BPF_FETCH ?  "r0 = " : "",
 				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
 				insn->dst_reg, insn->off,
 				insn->src_reg);
