@@ -7,27 +7,27 @@
 	BPF_MOV64_IMM(BPF_REG_1, 4),
 	BPF_MOV64_IMM(BPF_REG_0, 2),
 	BPF_ATOMIC_CMPXCHG(BPF_DW, BPF_REG_10, BPF_REG_1, -8),
-	/* if (old != 3) exit(1); */
+	/* if (old != 3) exit(2); */
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
-	BPF_MOV64_IMM(BPF_REG_0, 1),
+	BPF_MOV64_IMM(BPF_REG_0, 2),
 	BPF_EXIT_INSN(),
-	/* if (val != 3) exit(1); */
+	/* if (val != 3) exit(3); */
 	BPF_LDX_MEM(BPF_DW, BPF_REG_0, BPF_REG_10, -8),
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
-	BPF_MOV64_IMM(BPF_REG_0, 1),
+	BPF_MOV64_IMM(BPF_REG_0, 3),
 	BPF_EXIT_INSN(),
 	/* old = atomic_cmpxchg(&val, 3, 4); */
+	BPF_MOV64_IMM(BPF_REG_1, 4),
+	BPF_MOV64_IMM(BPF_REG_0, 3),
+	BPF_ATOMIC_CMPXCHG(BPF_DW, BPF_REG_10, BPF_REG_1, -8),
+	/* if (old != 3) exit(4); */
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
-	BPF_MOV64_IMM(BPF_REG_0, 1),
+	BPF_MOV64_IMM(BPF_REG_0, 4),
 	BPF_EXIT_INSN(),
-	/* if (old != 3) exit(1); */
-	BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
-	BPF_MOV64_IMM(BPF_REG_0, 1),
-	BPF_EXIT_INSN(),
-	/* if (val != 4) exit(1); */
+	/* if (val != 4) exit(5); */
 	BPF_LDX_MEM(BPF_DW, BPF_REG_0, BPF_REG_10, -8),
 	BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 4, 2),
-	BPF_MOV64_IMM(BPF_REG_0, 1),
+	BPF_MOV64_IMM(BPF_REG_0, 5),
 	BPF_EXIT_INSN(),
 	/* exit(0); */
 	BPF_MOV64_IMM(BPF_REG_0, 0),
