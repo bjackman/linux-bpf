@@ -1,5 +1,5 @@
 {
-	"atomic exchange smoketest - 64bit",
+	"atomic compare-and-exchange smoketest - 64bit",
 	.insns = {
 	/* val = 3; */
 	BPF_ST_MEM(BPF_DW, BPF_REG_10, -8, 3),
@@ -36,7 +36,7 @@
 	.result = ACCEPT,
 },
 {
-	"atomic exchange smoketest - 32bit",
+	"atomic compare-and-exchange smoketest - 32bit",
 	.insns = {
 	/* val = 3; */
 	BPF_ST_MEM(BPF_W, BPF_REG_10, -4, 3),
