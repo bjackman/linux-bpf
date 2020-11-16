@@ -1250,6 +1250,15 @@ st:			if (is_imm8(insn->off))
 
 		case BPF_STX | BPF_ATOMIC | BPF_W:
 		case BPF_STX | BPF_ATOMIC | BPF_DW:
+			if (insn->imm == BPF_SET) {
+				/*
+				 * atomic_set((u32/u64*)(dst_reg + off), src_reg);
+				 * On x86 atomic_set is just WRITE_ONCE.
+				 */
+				emit_stx(&prog, BPF_SIZE(insn->code), dst_reg, src_reg, insn->off);
+				break;
+			}
+
 			if (insn->imm == BPF_CMPSET) {
 				/*
 				 * x86 cmpxchg clobbers rax but this insn
@@ -1271,6 +1280,10 @@ st:			if (is_imm8(insn->off))
 
 			/* emit opcode */
 			switch (insn->imm) {
+			case BPF_SET | BPF_FETCH:
+				/* src_reg = atomic_chg(*(u32/u64*)(dst_reg + off), src_reg); */
+				EMIT1(0x87);
+				break;
 			case BPF_CMPSET:
 				/* r0 will be restored afterwards - fallthrough */
 			case BPF_CMPSET | BPF_FETCH:

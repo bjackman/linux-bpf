@@ -3614,7 +3614,7 @@ static int check_atomic(struct bpf_verifier_env *env, int insn_idx, struct bpf_i
 	if (err)
 		return err;
 
-	if (BPF_OP(insn->imm) == BPF_CMPSET || BPF_OP(insn->imm) == BPF_SET) {
+	if (BPF_OP(insn->imm) == BPF_CMPSET) {
 		/* check src3 operand */
 		err = check_reg_arg(env, BPF_REG_0, SRC_OP);
 		if (err)
@@ -3651,7 +3651,7 @@ static int check_atomic(struct bpf_verifier_env *env, int insn_idx, struct bpf_i
 	if (!(insn->imm & BPF_FETCH))
 		return 0;
 
-	if (BPF_OP(insn->imm) == BPF_CMPSET || BPF_OP(insn->imm) == BPF_SET) {
+	if (BPF_OP(insn->imm) == BPF_CMPSET) {
 		load_reg = BPF_REG_0;
 	} else {
 		load_reg = insn->src_reg;
