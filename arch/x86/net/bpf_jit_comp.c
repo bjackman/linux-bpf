@@ -1255,16 +1255,28 @@ st:			if (is_imm8(insn->off))
 
 		case BPF_STX | BPF_ATOMIC | BPF_W:
 		case BPF_STX | BPF_ATOMIC | BPF_DW:
-			if (BPF_OP(insn->imm) != BPF_ADD) {
-				pr_err("bpf_jit: unknown opcode %02x\n", insn->imm);
-				return -EFAULT;
+			if (insn->imm == BPF_SET) {
+				/*
+				 * atomic_set((u32/u64*)(dst_reg + off), src_reg);
+				 * On x86 atomic_set is just WRITE_ONCE.
+				 */
+				emit_stx(&prog, BPF_SIZE(insn->code), dst_reg, src_reg, insn->off);
+				break;
+			}
+
+			if (insn->imm == BPF_CMPSET) {
+				/*
+				 * x86 cmpxchg clobbers rax but this insn
+				 * shouldn't touch R0, so save it.
+				 */
+				EMIT_mov(AUX_REG, BPF_REG_0);
 			}
 
 			EMIT1(0xF0); /* lock prefix */
 
 			/* emit REX if necessary */
 			if (BPF_SIZE(insn->code) == BPF_W) {
-				/* Emit 'lock add dword ptr [rax + off], eax' */
+				/* Addressing like 'dword ptr [rax + off], eax' */
 				if (is_ereg(dst_reg) || is_ereg(src_reg))
 					EMIT1(add_2mod(0x40, dst_reg, src_reg));
 			} else {
@@ -1272,15 +1284,30 @@ st:			if (is_imm8(insn->off))
 			}
 
 			/* emit opcode */
-			if (insn->imm & BPF_FETCH) {
+			switch (insn->imm) {
+			case BPF_SET | BPF_FETCH:
+				/* src_reg = atomic_chg(*(u32/u64*)(dst_reg + off), src_reg); */
+				EMIT1(0x87);
+				break;
+			case BPF_CMPSET | BPF_FETCH:
+				/* r0 = atomic_cmpxchg(*(u32/u64*)(dst_reg + off), r0, src_reg); */
+				EMIT2(0x0F, 0xB1);
+				break;
+			case BPF_ADD | BPF_FETCH:
 				/* src_reg = sync_fetch_and_add(*(dst_reg + off), src_reg); */
 				EMIT2(0x0F, 0xC1);
-			} else {
+				break;
+			case BPF_ADD:
 				/* lock *(u32/u64*)(dst_reg + off) += src_reg */
 				EMIT1(0x01);
+				break;
+			default:
+				pr_err("bpf_jit: unknown atomic opcode %02x\n", insn->imm);
+				return -EFAULT;
 			}
 
 			emit_modrm_dstoff(&prog, dst_reg, src_reg, insn->off);
+
 			break;
 
 			/* call */
