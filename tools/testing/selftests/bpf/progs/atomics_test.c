@@ -23,3 +23,17 @@ int BPF_PROG(add, int a)
 
 	return 0;
 }
+
+__u64 cmpxchg64_value = 1;
+__u64 cmpxchg64_result_fail;
+__u64 cmpxchg64_result_succeed;
+SEC("fentry/bpf_fentry_test1")
+int BPF_PROG(cmpxchg, int a)
+{
+	cmpxchg64_result_fail = __sync_val_compare_and_swap(
+		&cmpxchg64_result_fail, 0, 3);
+	cmpxchg64_result_succeed = __sync_val_compare_and_swap(
+		&cmpxchg64_result_fail, 1, 2);
+}
+
+/* TODO: xchg, other binary ops */
