@@ -166,6 +166,25 @@ void print_bpf_insn(const struct bpf_insn_cbs *cbs,
 				insn->code, insn->src_reg,
 				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
 				insn->dst_reg, insn->off, insn->src_reg);
+		} else if (BPF_MODE(insn->code) == BPF_ATOMIC &&
+			   BPF_OP(insn->imm) == BPF_CMPSET) {
+			verbose(cbs->private_data, "(%02x) r0 = atomic_cmpxchg(*(%s *)(r%d %+d), r0, r%d)\n",
+				insn->code,
+				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
+				insn->dst_reg, insn->off,
+				insn->src_reg);
+		} else if (BPF_MODE(insn->code) == BPF_ATOMIC &&
+			   insn->imm == (BPF_SET | BPF_FETCH)) {
+			verbose(cbs->private_data, "(%02x) r%d = atomic_xchg(*(%s *)(r%d %+d), r%d)\n",
+				insn->code, insn->src_reg,
+				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
+				insn->dst_reg, insn->off, insn->src_reg);
+		} else if (BPF_MODE(insn->code) == BPF_ATOMIC &&
+			   insn->imm == BPF_SET) {
+			verbose(cbs->private_data, "(%02x) atomic_xchg(*(%s *)(r%d %+d), r%d)\n",
+				insn->code,
+				bpf_ldst_string[BPF_SIZE(insn->code) >> 3],
+				insn->dst_reg, insn->off, insn->src_reg);
 		} else {
 			verbose(cbs->private_data, "BUG_%02x\n", insn->code);
 		}
