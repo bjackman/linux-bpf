@@ -252,7 +252,9 @@ __bpf_prog_test_run_raw_tp(void *data)
 	struct bpf_raw_tp_test_run_info *info = data;
 
 	rcu_read_lock();
-	info->retval = BPF_PROG_RUN(info->prog, info->ctx);
+	u64 ret = BPF_PROG_RUN(info->prog, info->ctx);
+	printk("BPF_PROG_RUN: %llx\n", ret);
+	info->retval = ret;
 	rcu_read_unlock();
 }
 

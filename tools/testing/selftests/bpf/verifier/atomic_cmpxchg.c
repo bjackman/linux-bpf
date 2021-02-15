@@ -45,7 +45,7 @@
 		BPF_MOV32_IMM(BPF_REG_0, 2),
 		BPF_ATOMIC_OP(BPF_W, BPF_CMPXCHG, BPF_REG_10, BPF_REG_1, -4),
 		/* if (old != 3) exit(2); */
-		BPF_JMP32_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
+		BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 3, 2),
 		BPF_MOV32_IMM(BPF_REG_0, 2),
 		BPF_EXIT_INSN(),
 		/* if (val != 3) exit(3); */
@@ -93,4 +93,28 @@
 	},
 	.result = REJECT,
 	.errstr = "invalid read from stack",
+},
+{
+	"BPF_W cmpxchg should zero top 32 bits",
+	.insns = {
+		/* u64 r0 = U64_MAX; */
+		BPF_MOV64_IMM(BPF_REG_0, 0),
+		BPF_ALU64_IMM(BPF_SUB, BPF_REG_0, 1),
+		/* u64 val = U64_MAX; */
+		BPF_STX_MEM(BPF_DW, BPF_REG_10, BPF_REG_0, -8),
+		/* r0 = (u32)atomic_cmpxchg((u32 *)&val, r0, 1); */
+		BPF_MOV32_IMM(BPF_REG_1, 1),
+		BPF_ATOMIC_OP(BPF_W, BPF_CMPXCHG, BPF_REG_10, BPF_REG_1, -8),
+		/* if (r0 != 0x00000000FFFFFFFFull) exit(1); */
+		BPF_MOV64_IMM(BPF_REG_1, 1),
+		BPF_ALU64_IMM(BPF_ARSH, BPF_REG_1, 31),
+		BPF_ALU64_IMM(BPF_SUB, BPF_REG_1, 1),
+		BPF_JMP_REG(BPF_JEQ, BPF_REG_0, BPF_REG_1, 2),
+		BPF_MOV32_IMM(BPF_REG_0, 1),
+		BPF_EXIT_INSN(),
+		/* exit(0); */
+		/* BPF_MOV32_IMM(BPF_REG_0, 0), */
+		BPF_EXIT_INSN(),
+	},
+	.result = ACCEPT,
 },
