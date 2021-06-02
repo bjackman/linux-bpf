@@ -444,16 +444,12 @@ void set_pageblock_migratetype(struct page *page, int migratetype)
 static int page_outside_zone_boundaries(struct zone *zone, struct page *page)
 {
 	int ret;
-	unsigned seq;
 	unsigned long pfn = page_to_pfn(page);
 	unsigned long sp, start_pfn;
 
-	do {
-		seq = zone_span_seqbegin(zone);
-		start_pfn = zone->zone_start_pfn;
-		sp = zone->spanned_pages;
-		ret = !zone_spans_pfn(zone, pfn);
-	} while (zone_span_seqretry(zone, seq));
+	start_pfn = zone->zone_start_pfn;
+	sp = READ_ONCE(zone->spanned_pages);
+	ret = !zone_spans_pfn(zone, pfn);
 
 	if (ret)
 		pr_err("page 0x%lx outside node %d zone %s [ 0x%lx - 0x%lx ]\n",

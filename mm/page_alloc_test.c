@@ -10,7 +10,6 @@ static void test_alloc(struct kunit *test)
 	struct pglist_data *node0 = NODE_DATA(0);
 	struct zone *zone = &NODE_DATA(0)->node_zones[ZONE_MOVABLE];
 	unsigned long pfn;
-	unsigned seq;
 
 	// Carve out a fake micro-node whose zones are not on any real
 	// zonelists. We can then allocate from and free to this node for
@@ -19,10 +18,7 @@ static void test_alloc(struct kunit *test)
 	// Figure out which memory blocks will go into our fake node. We
 	// arbitrarily pick node 0 and grab half of ZONE_MOVABLE since we can
 	// get that for ourselves.
-	do {
-		seq = zone_span_seqbegin(zone);
-		spanned_pages = zone->spanned_pages;
-	} while (zone_span_seqretry(zone, seq));
+	pfn = zone->zone_start_pfn + (zone->spanned_pages / 2);
 	struct memory_block *block_start = find_memory_block(
 		pfn_to_section_nr(zone->zone_start_pfn));
 

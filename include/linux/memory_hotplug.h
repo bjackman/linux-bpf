@@ -141,31 +141,7 @@ bool mhp_supports_memmap_on_memory(void);
 
 /*
  * Zone resizing functions
- *
- * Note: any attempt to resize a zone should has pgdat_resize_lock()
- * zone_span_writelock() both held. This ensure the size of a zone
- * can't be changed while pgdat_resize_lock() held.
  */
-static inline unsigned zone_span_seqbegin(struct zone *zone)
-{
-	return read_seqbegin(&zone->span_seqlock);
-}
-static inline int zone_span_seqretry(struct zone *zone, unsigned iv)
-{
-	return read_seqretry(&zone->span_seqlock, iv);
-}
-static inline void zone_span_writelock(struct zone *zone)
-{
-	write_seqlock(&zone->span_seqlock);
-}
-static inline void zone_span_writeunlock(struct zone *zone)
-{
-	write_sequnlock(&zone->span_seqlock);
-}
-static inline void zone_seqlock_init(struct zone *zone)
-{
-	seqlock_init(&zone->span_seqlock);
-}
 extern void adjust_present_page_count(struct page *page,
 				      struct memory_group *group,
 				      long nr_pages);
@@ -251,17 +227,6 @@ static inline void pgdat_kswapd_lock_init(pg_data_t *pgdat)
 	___page;				\
  })
 
-static inline unsigned zone_span_seqbegin(struct zone *zone)
-{
-	return 0;
-}
-static inline int zone_span_seqretry(struct zone *zone, unsigned iv)
-{
-	return 0;
-}
-static inline void zone_span_writelock(struct zone *zone) {}
-static inline void zone_span_writeunlock(struct zone *zone) {}
-static inline void zone_seqlock_init(struct zone *zone) {}
 
 static inline int try_online_node(int nid)
 {
