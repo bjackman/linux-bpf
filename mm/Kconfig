@@ -1240,6 +1240,15 @@ config LOCK_MM_AND_FIND_VMA
 config IOMMU_MM_DATA
 	bool
 
+config PAGE_ALLOC_UNIT_TEST
+	tristate "KUnit test for page allocator" if !KUNIT_ALL_TESTS
+	depends on KUNIT
+	default KUNIT_ALL_TESTS
+	help
+	  Builds unit tests for page allocator.
+
+	  If unsure, say N.
+
 source "mm/damon/Kconfig"
 
 endmenu
