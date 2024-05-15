@@ -177,6 +177,12 @@ static inline void arch_alloc_page(struct page *page, int order) { }
 
 struct page *__alloc_pages(gfp_t gfp, unsigned int order, int preferred_nid,
 		nodemask_t *nodemask);
+#ifdef CONFIG_KUNIT
+struct page *__alloc_pages_zonelist(gfp_t gfp, unsigned int order,
+		struct zonelist *zonelist, nodemask_t *nodemask);
+#endif
+
+
 struct folio *__folio_alloc(gfp_t gfp, unsigned int order, int preferred_nid,
 		nodemask_t *nodemask);
 

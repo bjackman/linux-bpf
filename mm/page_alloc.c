@@ -55,6 +55,7 @@
 #include <linux/delayacct.h>
 #include <linux/cacheinfo.h>
 #include <asm/div64.h>
+#include <kunit/visibility.h>
 #include "internal.h"
 #include "shuffle.h"
 #include "page_reporting.h"
@@ -4322,12 +4323,12 @@ got_pg:
 }
 
 static inline bool prepare_alloc_pages(gfp_t gfp_mask, unsigned int order,
-		int preferred_nid, nodemask_t *nodemask,
+		struct zonelist *zonelist, nodemask_t *nodemask,
 		struct alloc_context *ac, gfp_t *alloc_gfp,
 		unsigned int *alloc_flags)
 {
 	ac->highest_zoneidx = gfp_zone(gfp_mask);
-	ac->zonelist = node_zonelist(preferred_nid, gfp_mask);
+	ac->zonelist = zonelist;
 	ac->nodemask = nodemask;
 	ac->migratetype = gfp_migratetype(gfp_mask);
 
@@ -4438,7 +4439,8 @@ unsigned long __alloc_pages_bulk(gfp_t gfp, int preferred_nid,
 	/* May set ALLOC_NOFRAGMENT, fragmentation will return 1 page. */
 	gfp &= gfp_allowed_mask;
 	alloc_gfp = gfp;
-	if (!prepare_alloc_pages(gfp, 0, preferred_nid, nodemask, &ac, &alloc_gfp, &alloc_flags))
+	if (!prepare_alloc_pages(gfp, 0, node_zonelist(preferred_nid, gfp),
+				 nodemask, &ac, &alloc_gfp, &alloc_flags))
 		goto out;
 	gfp = alloc_gfp;
 
@@ -4536,8 +4538,9 @@ EXPORT_SYMBOL_GPL(__alloc_pages_bulk);
 /*
  * This is the 'heart' of the zoned buddy allocator.
  */
-struct page *__alloc_pages(gfp_t gfp, unsigned int order, int preferred_nid,
-							nodemask_t *nodemask)
+VISIBLE_IF_KUNIT struct page *__alloc_pages_zonelist(
+	gfp_t gfp, unsigned int order,
+	struct zonelist *zonelist, nodemask_t *nodemask)
 {
 	struct page *page;
 	unsigned int alloc_flags = ALLOC_WMARK_LOW;
@@ -4561,7 +4564,7 @@ struct page *__alloc_pages(gfp_t gfp, unsigned int order, int preferred_nid,
 	 */
 	gfp = current_gfp_context(gfp);
 	alloc_gfp = gfp;
-	if (!prepare_alloc_pages(gfp, order, preferred_nid, nodemask, &ac,
+	if (!prepare_alloc_pages(gfp, order, zonelist,nodemask, &ac,
 			&alloc_gfp, &alloc_flags))
 		return NULL;
 
@@ -4598,6 +4601,13 @@ out:
 	kmsan_alloc_page(page, order, alloc_gfp);
 
 	return page;
+}
+
+struct page *__alloc_pages(gfp_t gfp, unsigned int order,
+			   int preferred_nid, nodemask_t *nodemask)
+{
+	return __alloc_pages_zonelist(
+		gfp, order, node_zonelist(preferred_nid, gfp), nodemask);
 }
 EXPORT_SYMBOL(__alloc_pages);
 
