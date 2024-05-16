@@ -1242,7 +1242,7 @@ config IOMMU_MM_DATA
 
 config PAGE_ALLOC_UNIT_TEST
 	tristate "KUnit test for page allocator" if !KUNIT_ALL_TESTS
-	depends on KUNIT
+	depends on KUNIT && NUMA
 	default KUNIT_ALL_TESTS
 	help
 	  Builds unit tests for page allocator.
