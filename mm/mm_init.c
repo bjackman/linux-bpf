@@ -1535,7 +1535,7 @@ void __ref free_area_init_core_hotplug(struct pglist_data *pgdat)
 	for (z = 0; z < MAX_NR_ZONES; z++) {
 		struct zone *zone = pgdat->node_zones + z;
 
-		zone->present_pages = 0;
+		WRITE_ONCE(zone->present_pages, 0);
 		zone_init_internals(zone, z, nid, 0);
 	}
 }

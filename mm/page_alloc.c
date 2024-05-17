@@ -5675,7 +5675,7 @@ __meminit void zone_pcp_init(struct zone *zone)
 
 	if (populated_zone(zone))
 		pr_debug("  %s zone: %lu pages, LIFO batch:%u\n", zone->name,
-			 zone->present_pages, zone_batchsize(zone));
+			 READ_ONCE(zone->present_pages), zone_batchsize(zone));
 }
 
 void adjust_managed_page_count(struct page *page, long count)

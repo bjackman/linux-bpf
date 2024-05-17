@@ -463,6 +463,8 @@ static void shrink_zone_span(struct zone *zone, unsigned long start_pfn,
 	int nid = zone_to_nid(zone);
 
 	if (zone->zone_start_pfn == start_pfn) {
+		unsigned long old_end_pfn = zone_end_pfn(zone);
+
 		/*
 		 * If the section is smallest section in the zone, it need
 		 * shrink zone->zone_start_pfn and zone->zone_spanned_pages.
@@ -470,13 +472,13 @@ static void shrink_zone_span(struct zone *zone, unsigned long start_pfn,
 		 * for shrinking zone.
 		 */
 		pfn = find_smallest_section_pfn(nid, zone, end_pfn,
-						zone_end_pfn(zone));
+						old_end_pfn);
 		if (pfn) {
-			zone->spanned_pages = zone_end_pfn(zone) - pfn;
+			WRITE_ONCE(zone->spanned_pages, old_end_pfn - pfn);
 			zone->zone_start_pfn = pfn;
 		} else {
 			zone->zone_start_pfn = 0;
-			zone->spanned_pages = 0;
+			WRITE_ONCE(zone->spanned_pages, 0);
 		}
 	} else if (zone_end_pfn(zone) == end_pfn) {
 		/*
@@ -488,10 +490,11 @@ static void shrink_zone_span(struct zone *zone, unsigned long start_pfn,
 		pfn = find_biggest_section_pfn(nid, zone, zone->zone_start_pfn,
 					       start_pfn);
 		if (pfn)
-			zone->spanned_pages = pfn - zone->zone_start_pfn + 1;
+			WRITE_ONCE(zone->spanned_pages,
+				   pfn - zone->zone_start_pfn + 1);
 		else {
 			zone->zone_start_pfn = 0;
-			zone->spanned_pages = 0;
+			WRITE_ONCE(zone->spanned_pages, 0);
 		}
 	}
 }
@@ -710,7 +713,8 @@ static void __meminit resize_zone_range(struct zone *zone, unsigned long start_p
 	if (zone_is_empty(zone) || start_pfn < zone->zone_start_pfn)
 		zone->zone_start_pfn = start_pfn;
 
-	zone->spanned_pages = max(start_pfn + nr_pages, old_end_pfn) - zone->zone_start_pfn;
+	WRITE_ONCE(zone->spanned_pages,
+		   max(start_pfn + nr_pages, old_end_pfn) - zone->zone_start_pfn);
 }
 
 static void __meminit resize_pgdat_range(struct pglist_data *pgdat, unsigned long start_pfn,
@@ -795,7 +799,7 @@ static void auto_movable_stats_account_zone(struct auto_movable_stats *stats,
 					    struct zone *zone)
 {
 	if (zone_idx(zone) == ZONE_MOVABLE) {
-		stats->movable_pages += zone->present_pages;
+		stats->movable_pages += READ_ONCE(zone->present_pages);
 	} else {
 		stats->kernel_early_pages += zone->present_early_pages;
 #ifdef CONFIG_CMA
@@ -1077,7 +1081,7 @@ void adjust_present_page_count(struct page *page, struct memory_group *group,
 	 */
 	if (early_section(__pfn_to_section(page_to_pfn(page))))
 		zone->present_early_pages += nr_pages;
-	zone->present_pages += nr_pages;
+	WRITE_ONCE(zone->present_pages, zone->present_pages + nr_pages);
 	zone->zone_pgdat->node_present_pages += nr_pages;
 
 	if (group && movable)

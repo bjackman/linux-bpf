@@ -1015,11 +1015,13 @@ static inline unsigned long zone_cma_pages(struct zone *zone)
 #endif
 }
 
+/* This is unstable unless you hold mem_hotplug_lock. */
 static inline unsigned long zone_end_pfn(const struct zone *zone)
 {
-	return zone->zone_start_pfn + zone->spanned_pages;
+	return zone->zone_start_pfn + READ_ONCE(zone->spanned_pages);
 }
 
+/* This is unstable unless you hold mem_hotplug_lock. */
 static inline bool zone_spans_pfn(const struct zone *zone, unsigned long pfn)
 {
 	return zone->zone_start_pfn <= pfn && pfn < zone_end_pfn(zone);
@@ -1030,9 +1032,10 @@ static inline bool zone_is_initialized(struct zone *zone)
 	return zone->initialized;
 }
 
+/* This is unstable unless you hold mem_hotplug_lock. */
 static inline bool zone_is_empty(struct zone *zone)
 {
-	return zone->spanned_pages == 0;
+	return READ_ONCE(zone->spanned_pages) == 0;
 }
 
 #ifndef BUILD_VDSO32_64
@@ -1482,10 +1485,13 @@ static inline bool managed_zone(struct zone *zone)
 	return zone_managed_pages(zone);
 }
 
-/* Returns true if a zone has memory */
+/*
+ * Returns true if a zone has memory.
+ * This is unstable unless you old mem_hotplug_lock.
+ */
 static inline bool populated_zone(struct zone *zone)
 {
-	return zone->present_pages;
+	return READ_ONCE(zone->present_pages);
 }
 
 #ifdef CONFIG_NUMA

@@ -337,7 +337,7 @@ static void show_free_areas(unsigned int filter, nodemask_t *nodemask, int max_z
 			K(zone_page_state(zone, NR_ZONE_INACTIVE_FILE)),
 			K(zone_page_state(zone, NR_ZONE_UNEVICTABLE)),
 			K(zone_page_state(zone, NR_ZONE_WRITE_PENDING)),
-			K(zone->present_pages),
+			K(READ_ONCE(zone->present_pages)),
 			K(zone_managed_pages(zone)),
 			K(zone_page_state(zone, NR_MLOCK)),
 			K(zone_page_state(zone, NR_BOUNCE)),
@@ -407,11 +407,11 @@ void __show_mem(unsigned int filter, nodemask_t *nodemask, int max_zone_idx)
 
 	for_each_populated_zone(zone) {
 
-		total += zone->present_pages;
-		reserved += zone->present_pages - zone_managed_pages(zone);
+		total += READ_ONCE(zone->present_pages);
+		reserved += READ_ONCE(zone->present_pages) - zone_managed_pages(zone);
 
 		if (is_highmem(zone))
-			highmem += zone->present_pages;
+			highmem += READ_ONCE(zone->present_pages);
 	}
 
 	printk("%lu pages RAM\n", total);
