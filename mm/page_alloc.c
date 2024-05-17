@@ -1665,6 +1665,8 @@ int move_freepages_block(struct zone *zone, struct page *page,
 	end_pfn = pageblock_end_pfn(pfn) - 1;
 
 	/* Do not cross zone boundaries */
+	/* TODO: Is it possible for zone boundaries to be in the middle of a
+	 * pageblock? */
 	if (!zone_spans_pfn(zone, start_pfn))
 		start_pfn = pfn;
 	if (!zone_spans_pfn(zone, end_pfn))
@@ -6547,6 +6549,7 @@ struct page *alloc_contig_pages(unsigned long nr_pages, gfp_t gfp_mask,
 		spin_lock_irqsave(&zone->lock, flags);
 
 		pfn = ALIGN(zone->zone_start_pfn, nr_pages);
+		/* Note the span check is racy vs unplug. */
 		while (zone_spans_last_pfn(zone, pfn, nr_pages)) {
 			if (pfn_range_valid_contig(zone, pfn, nr_pages)) {
 				/*
